@@ -40,7 +40,7 @@ type Conf struct {
 	// the enablement of thread safety in all of the public koanf methods is disabled by default.
 	// This way usages of this library in single-threaded cases do not pay the unecessary overhead
 	// of locking/unlocking. If using this library in concurrent go routines, enable this option.
-	UseConccurency bool
+	UseConcurrency bool
 }
 
 // KeyMap represents a map of flattened delimited keys and the non-delimited
@@ -79,7 +79,7 @@ func New(delim string) *Koanf {
 	return NewWithConf(Conf{
 		Delim:          delim,
 		StrictMerge:    false,
-		UseConccurency: false,
+		UseConcurrency: false,
 	})
 }
 
@@ -133,7 +133,7 @@ func (ko *Koanf) Load(p Provider, pa Parser, opts ...Option) error {
 // Keys returns the slice of all flattened keys in the loaded configuration
 // sorted alphabetically.
 func (ko *Koanf) Keys() []string {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -148,7 +148,7 @@ func (ko *Koanf) Keys() []string {
 // KeyMap returns a map of flattened keys and the individual parts of the
 // key as slices. eg: "parent.child.key" => ["parent", "child", "key"].
 func (ko *Koanf) KeyMap() KeyMap {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -164,7 +164,7 @@ func (ko *Koanf) KeyMap() KeyMap {
 // Note that it uses maps.Copy to create a copy that uses
 // json.Marshal which changes the numeric types to float64.
 func (ko *Koanf) All() map[string]interface{} {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -175,7 +175,7 @@ func (ko *Koanf) All() map[string]interface{} {
 // Note that it uses maps.Copy to create a copy that uses
 // json.Marshal which changes the numeric types to float64.
 func (ko *Koanf) Raw() map[string]interface{} {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -185,7 +185,7 @@ func (ko *Koanf) Raw() map[string]interface{} {
 // Sprint returns a key -> value string representation
 // of the config map with keys sorted alphabetically.
 func (ko *Koanf) Sprint() string {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -199,7 +199,7 @@ func (ko *Koanf) Sprint() string {
 // Print prints a key -> value string representation
 // of the config map with keys sorted alphabetically.
 func (ko *Koanf) Print() {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -213,7 +213,7 @@ func (ko *Koanf) Print() {
 // instance with the config map `sub.a.b` where everything above
 // `parent.child` are cut out.
 func (ko *Koanf) Cut(path string) *Koanf {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -271,7 +271,7 @@ func (ko *Koanf) Set(key string, val interface{}) error {
 // Marshal takes a Parser implementation and marshals the config map into bytes,
 // for example, to TOML or JSON bytes.
 func (ko *Koanf) Marshal(p Parser) ([]byte, error) {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -290,7 +290,7 @@ func (ko *Koanf) Unmarshal(path string, o interface{}) error {
 // See mitchellh/mapstructure's DecoderConfig for advanced customization
 // of the unmarshal behaviour.
 func (ko *Koanf) UnmarshalWithConf(path string, o interface{}, c UnmarshalConf) error {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -332,7 +332,7 @@ func (ko *Koanf) UnmarshalWithConf(path string, o interface{}, c UnmarshalConf) 
 // Clears all keys/values if no path is specified.
 // Every empty, key on the path, is recursively deleted.
 func (ko *Koanf) Delete(path string) {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.Lock()
 		defer ko.rwMutex.Unlock()
 	}
@@ -359,7 +359,7 @@ func (ko *Koanf) Delete(path string) {
 // Get returns the raw, uncast interface{} value of a given key path
 // in the config map. If the key path does not exist, nil is returned.
 func (ko *Koanf) Get(path string) interface{} {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -396,7 +396,7 @@ func (ko *Koanf) Get(path string) interface{} {
 // Slices returns a list of Koanf instances constructed out of a
 // []map[string]interface{} interface at the given path.
 func (ko *Koanf) Slices(path string) []*Koanf {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -427,7 +427,7 @@ func (ko *Koanf) Slices(path string) []*Koanf {
 
 // Exists returns true if the given key path exists in the conf map.
 func (ko *Koanf) Exists(path string) bool {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -439,7 +439,7 @@ func (ko *Koanf) Exists(path string) bool {
 // given path. If the path is not a map, an empty string slice is
 // returned.
 func (ko *Koanf) MapKeys(path string) []string {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.RLock()
 		defer ko.rwMutex.RUnlock()
 	}
@@ -469,7 +469,7 @@ func (ko *Koanf) Delim() string {
 }
 
 func (ko *Koanf) merge(c map[string]interface{}, opts *options) error {
-	if ko.conf.UseConccurency {
+	if ko.conf.UseConcurrency {
 		ko.rwMutex.Lock()
 		defer ko.rwMutex.Unlock()
 	}

@@ -27,7 +27,7 @@ func BenchmarkSerialReadsWithLockingOverhead(b *testing.B) {
 	k := koanfRefactored.NewWithConf(koanfRefactored.Conf{
 		Delim:          "_",
 		StrictMerge:    false,
-		UseConccurency: true,
+		UseConcurrency: true,
 	})
 	entries := generateEntrys(ITERATIONS)
 
