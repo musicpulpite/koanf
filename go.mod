@@ -1,4 +1,4 @@
-module github.com/knadh/koanf/v2
+module github.com/musicpulpite/koanf/v2
 
 go 1.18
 
