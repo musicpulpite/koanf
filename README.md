@@ -2,13 +2,15 @@
 
 ![koanf](https://user-images.githubusercontent.com/547147/72681838-6981dd00-3aed-11ea-8f5d-310816c70c08.png)
 
+> **_IMPORTANT_**: This forked version of koanf is identical in every way to the original except that it adds thread safety (using a global `RWMutex`) to all of the public methods. See tests for benchmarks comparing the added overhead of a mutex lock to the behavior of the base package.
+
 **koanf** is a library for reading configuration from different sources in different formats in Go applications. It is a cleaner, lighter [alternative to spf13/viper](#alternative-to-viper) with better abstractions and extensibility and far fewer dependencies.
 
 koanf v2 has modules (Providers) for reading configuration from a variety of sources such as files, command line flags, environment variables, Vault, and S3 and for parsing (Parsers) formats such as JSON, YAML, TOML, Hashicorp HCL. It is easy to plug in custom parsers and providers.
 
 All external dependencies in providers and parsers are detached from the core and can be installed separately as necessary.
 
-[![Run Tests](https://github.com/knadh/koanf/actions/workflows/test.yml/badge.svg)](https://github.com/knadh/koanf/actions/workflows/test.yml) [![GoDoc](https://pkg.go.dev/badge/github.com/knadh/koanf?utm_source=godoc)](https://pkg.go.dev/github.com/knadh/koanf/v2) 
+[![Run Tests](https://github.com/knadh/koanf/actions/workflows/test.yml/badge.svg)](https://github.com/knadh/koanf/actions/workflows/test.yml) [![GoDoc](https://pkg.go.dev/badge/github.com/knadh/koanf?utm_source=godoc)](https://pkg.go.dev/github.com/knadh/koanf/v2)
 
 ### Installation
 
@@ -92,13 +94,13 @@ func main() {
 ```
 
 ### Watching file for changes
+
 Some providers expose a `Watch()` method that makes the provider watch for changes
 in configuration and trigger a callback to reload the configuration.
 This is not goroutine safe if there are concurrent `*Get()` calls happening on the
 koanf object while it is doing a `Load()`. Such scenarios will need mutex locking.
 
 `file, appconfig, vault, consul` providers have a `Watch()` method.
-
 
 ```go
 package main
@@ -154,7 +156,6 @@ func main() {
 	<-make(chan bool)
 }
 ```
-
 
 ### Reading from command line
 
@@ -250,8 +251,8 @@ func main() {
 	//
 	// For example, env vars: MYVAR_TYPE and MYVAR_PARENT1_CHILD1_NAME
 	// will be merged into the "type" and the nested "parent1.child1.name"
-	// keys in the config file here as we lowercase the key, 
-	// replace `_` with `.` and strip the MYVAR_ prefix so that 
+	// keys in the config file here as we lowercase the key,
+	// replace `_` with `.` and strip the MYVAR_ prefix so that
 	// only "parent1.child1.name" remains.
 	k.Load(env.Provider("MYVAR_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
@@ -323,6 +324,7 @@ func main() {
 ```
 
 ### Unmarshalling and marshalling
+
 `Parser`s can be used to unmarshal and scan the values in a Koanf instance into a struct based on the field tags, and to marshal a Koanf instance back into serialized bytes, for example to JSON or YAML files
 
 ```go
@@ -439,7 +441,7 @@ func main() {
 
 #### Reading from nested maps
 
-The bundled `confmap` provider takes a `map[string]interface{}` that can be loaded into a koanf instance. 
+The bundled `confmap` provider takes a `map[string]interface{}` that can be loaded into a koanf instance.
 
 ```go
 package main
@@ -480,7 +482,7 @@ func main() {
 }
 ```
 
-#### Reading from struct 
+#### Reading from struct
 
 The bundled `structs` provider can be used to read data from a struct to load into a koanf instance.
 
@@ -543,20 +545,27 @@ func main() {
 	fmt.Printf("name is = `%s`\n", k.String("parent1.child1.name"))
 }
 ```
+
 ### Merge behavior
+
 #### Default behavior
+
 The default behavior when you create Koanf this way is: `koanf.New(delim)` that the latest loaded configuration will
 merge with the previous one.
 
 For example:
 `first.yml`
+
 ```yaml
-key: [1,2,3]
+key: [1, 2, 3]
 ```
+
 `second.yml`
+
 ```yaml
-key: 'string'
+key: "string"
 ```
+
 When `second.yml` is loaded it will override the type of the `first.yml`.
 
 If this behavior is not desired, you can merge 'strictly'. In the same scenario, `Load` will return an error.
@@ -593,8 +602,9 @@ func main() {
 	}
 }
 ```
+
 **Note:** When merging different extensions, each parser can treat his types differently,
- meaning even though you the load same types there is a probability that it will fail with `StrictMerge: true`.
+meaning even though you the load same types there is a probability that it will fail with `StrictMerge: true`.
 
 For example: merging JSON and YAML will most likely fail because JSON treats integers as float64 and YAML treats them as integers.
 
@@ -656,47 +666,45 @@ See the full API documentation of all available methods at https://pkg.go.dev/gi
 
 Install with `go get -u github.com/knadh/koanf/providers/$provider`
 
-| Package             | Provider                                                      | Description                                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| file      | `file.Provider(filepath string)`                              | Reads a file and returns the raw bytes to be parsed.                                                                                                                                  |
-| fs      | `fs.Provider(f fs.FS, filepath string)`                              | (**Experimental**) Reads a file from fs.FS and returns the raw bytes to be parsed. The provider requires `go v1.16` or higher.                                            |
-| basicflag | `basicflag.Provider(f *flag.FlagSet, delim string)`           | Takes an stdlib `flag.FlagSet`                                                                                                                                                        |
-| posflag   | `posflag.Provider(f *pflag.FlagSet, delim string)`            | Takes an `spf13/pflag.FlagSet` (advanced POSIX compatible flags with multiple types) and provides a nested config map based on delim.                                                 |
-| env       | `env.Provider(prefix, delim string, f func(s string) string)` | Takes an optional prefix to filter env variables by, an optional function that takes and returns a string to transform env variables, and returns a nested config map based on delim. |
-| confmap   | `confmap.Provider(mp map[string]interface{}, delim string)`   | Takes a premade `map[string]interface{}` conf map. If delim is provided, the keys are assumed to be flattened, thus unflattened using delim.                                          |
-| structs   | `structs.Provider(s interface{}, tag string)`                 | Takes a struct and struct tag.                                                                                                                                                        |
-| s3        | `s3.Provider(s3.S3Config{})`                                  | Takes a s3 config struct.                                                                                                                                                             |
-| rawbytes  | `rawbytes.Provider(b []byte)`                                 | Takes a raw `[]byte` slice to be parsed with a koanf.Parser                                                                                                                           |
-| vault/v2     | `vault.Provider(vault.Config{})`                              | Hashicorp Vault provider                                                                                                                           |
-| appconfig/v2     | `vault.AppConfig(appconfig.Config{})`                              | AWS AppConfig provider                                                                                                                           |
-| etcd/v2     | `etcd.Provider(etcd.Config{})`                              | CNCF etcd provider                                                                                                                           |
-| consul/v2     | `consul.Provider(consul.Config{})`                              | Hashicorp Consul provider                                                                                                                           |
-| parameterstore/v2 | `parameterstore.Provider(parameterstore.Config{})` | AWS Systems Manager Parameter Store provider |
-
+| Package           | Provider                                                      | Description                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| file              | `file.Provider(filepath string)`                              | Reads a file and returns the raw bytes to be parsed.                                                                                                                                  |
+| fs                | `fs.Provider(f fs.FS, filepath string)`                       | (**Experimental**) Reads a file from fs.FS and returns the raw bytes to be parsed. The provider requires `go v1.16` or higher.                                                        |
+| basicflag         | `basicflag.Provider(f *flag.FlagSet, delim string)`           | Takes an stdlib `flag.FlagSet`                                                                                                                                                        |
+| posflag           | `posflag.Provider(f *pflag.FlagSet, delim string)`            | Takes an `spf13/pflag.FlagSet` (advanced POSIX compatible flags with multiple types) and provides a nested config map based on delim.                                                 |
+| env               | `env.Provider(prefix, delim string, f func(s string) string)` | Takes an optional prefix to filter env variables by, an optional function that takes and returns a string to transform env variables, and returns a nested config map based on delim. |
+| confmap           | `confmap.Provider(mp map[string]interface{}, delim string)`   | Takes a premade `map[string]interface{}` conf map. If delim is provided, the keys are assumed to be flattened, thus unflattened using delim.                                          |
+| structs           | `structs.Provider(s interface{}, tag string)`                 | Takes a struct and struct tag.                                                                                                                                                        |
+| s3                | `s3.Provider(s3.S3Config{})`                                  | Takes a s3 config struct.                                                                                                                                                             |
+| rawbytes          | `rawbytes.Provider(b []byte)`                                 | Takes a raw `[]byte` slice to be parsed with a koanf.Parser                                                                                                                           |
+| vault/v2          | `vault.Provider(vault.Config{})`                              | Hashicorp Vault provider                                                                                                                                                              |
+| appconfig/v2      | `vault.AppConfig(appconfig.Config{})`                         | AWS AppConfig provider                                                                                                                                                                |
+| etcd/v2           | `etcd.Provider(etcd.Config{})`                                | CNCF etcd provider                                                                                                                                                                    |
+| consul/v2         | `consul.Provider(consul.Config{})`                            | Hashicorp Consul provider                                                                                                                                                             |
+| parameterstore/v2 | `parameterstore.Provider(parameterstore.Config{})`            | AWS Systems Manager Parameter Store provider                                                                                                                                          |
 
 ### Bundled Parsers
 
 Install with `go get -u github.com/knadh/koanf/parsers/$parser`
 
-| Package      | Parser                           | Description                                                                                                                                               |
-| ------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package    | Parser                           | Description                                                                                                                                               |
+| ---------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | json       | `json.Parser()`                  | Parses JSON bytes into a nested map                                                                                                                       |
 | yaml       | `yaml.Parser()`                  | Parses YAML bytes into a nested map                                                                                                                       |
 | toml       | `toml.Parser()`                  | Parses TOML bytes into a nested map                                                                                                                       |
 | toml/v2    | `toml.Parser()`                  | Parses TOML bytes into a nested map (using go-toml v2)                                                                                                    |
-| dotenv     | `dotenv.Parser()`              | Parses DotEnv bytes into a flat map                                                                                                                       |
+| dotenv     | `dotenv.Parser()`                | Parses DotEnv bytes into a flat map                                                                                                                       |
 | hcl        | `hcl.Parser(flattenSlices bool)` | Parses Hashicorp HCL bytes into a nested map. `flattenSlices` is recommended to be set to true. [Read more](https://github.com/hashicorp/hcl/issues/162). |
-| nestedtext | `nestedtext.Parser()`              | Parses NestedText bytes into a flat map                                                                                                                 |
-| hjson		 | `hjson.Parser()`					| Parses HJSON bytes into a nested map
-																							|
-
+| nestedtext | `nestedtext.Parser()`            | Parses NestedText bytes into a flat map                                                                                                                   |
+| hjson      | `hjson.Parser()`                 | Parses HJSON bytes into a nested map                                                                                                                      |
+|  |
 
 ### Third-party Providers
-| Package             | Provider                                                      | Description                                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| github.com/defensestation/koanf/providers/secretsmanager     | `vault.SecretsMananger(secretsmanager.Config{}, f func(s string) string)`                              | AWS Secrets Manager provider, takes map or string as a value from store                                                						  |
-| github.com/defensestation/koanf/providers/parameterstore     | `vault.ParameterStore(parameterstore.Config{}, f func(s string) string)`                              | AWS ParameterStore provider, an optional function that takes and returns a string to transform env variables                                                 						  |
 
+| Package                                                  | Provider                                                                  | Description                                                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| github.com/defensestation/koanf/providers/secretsmanager | `vault.SecretsMananger(secretsmanager.Config{}, f func(s string) string)` | AWS Secrets Manager provider, takes map or string as a value from store                                      |
+| github.com/defensestation/koanf/providers/parameterstore | `vault.ParameterStore(parameterstore.Config{}, f func(s string) string)`  | AWS ParameterStore provider, an optional function that takes and returns a string to transform env variables |
 
 ### Alternative to viper
 
